@@ -1,0 +1,118 @@
+package sampling
+
+import (
+	"reflect"
+	"testing"
+)
+
+var s0 = "s0"
+
+func TestNew(t *testing.T) {
+	got := New(string)(1)
+	want := &Sequence(string){buf: make([]string, 1)}
+	if !reflect.DeepEqual(got, want) {
+		t.Errorf("New(1) = %v, want %v", got, want)
+	}
+}
+
+func TestReset(t *testing.T) {
+	seq := &Sequence(string){n: 1}
+	seq.Reset()
+	want := 0
+	if seq.n != want {
+		t.Errorf("after Reset, seq.n = %d, want %d", seq.n, want)
+	}
+}
+
+func TestAdd0(t *testing.T) {
+	seq := &Sequence(string){buf: make([]string, 2)}
+	seq.Add(s0)
+	if seq.n != 1 {
+		t.Errorf("after Add, n = %d, want 1", seq.n)
+	}
+	if seq.buf[0] != s0 {
+		t.Errorf("after Add, buf[0] = %v, want s0", seq.buf[0])
+	}
+	if seq.buf[1] != "" {
+		t.Errorf(`after Add, buf[1] = %v, want ""`, seq.buf[1])
+	}
+}
+
+func TestAddN(t *testing.T) {
+	seq := &Sequence(string){buf: make([]string, 2), n: 2}
+	seq.Add(s0)
+	if seq.n != 3 {
+		t.Fatalf("after Add, seq.n = %d, want 3", seq.n)
+	}
+	if (seq.buf[0] == "") == (seq.buf[1] == "") {
+		t.Errorf(`after Add, exactly one buffer cell must be ""`)
+	}
+	if (seq.buf[0] == s0) == (seq.buf[1] == s0) {
+		t.Errorf("after Add, exactly one buffer cell must be s0")
+	}
+}
+
+func TestSample(t *testing.T) {
+	cases := []struct{ cap, param, added int }{
+		{1, 2, 3},
+		{3, 1, 2},
+		{2, 3, 1},
+	}
+	for _, test := range cases {
+		seq := &Sequence(string){buf: make([]string, test.cap), n: test.added}
+		got := make([]string, test.param)
+		ngot := seq.Sample(got)
+		if ngot != 1 {
+			t.Errorf("case %+v ngot = %d, want 1", test, ngot)
+		}
+	}
+}
+
+func TestCap(t *testing.T) {
+	seq := &Sequence(string){buf: make([]string, 2)}
+	got := seq.Cap()
+	if got != 2 {
+		t.Errorf("seq.Cap() = %d, want 2", got)
+	}
+}
+
+func TestAdded(t *testing.T) {
+	seq := &Sequence(string){n: 2}
+	got := seq.Added()
+	if got != 2 {
+		t.Errorf("seq.Added() = %d, want 2", got)
+	}
+}
+
+func TestZero(t *testing.T) {
+	var seq Sequence(string)
+	gotCap := seq.Cap()
+	if gotCap != 0 {
+		t.Errorf("Sequence(string){}.Cap() = %d, want 0", gotCap)
+	}
+	gotAdded := seq.Added()
+	if gotAdded != 0 {
+		t.Errorf("Sequence(string){}.Added() = %d, want 0", gotAdded)
+	}
+	gotSample := make([]string, 5)
+	gotSample = gotSample[:seq.Sample(gotSample)]
+	wantSample := []string{}
+	if !reflect.DeepEqual(gotSample, wantSample) {
+		t.Errorf("Sequence(string){}.Sample() = %v, want %v", gotSample, wantSample)
+	}
+
+	seq.Add("a")
+	seq.Add("b")
+	seq.Add("c")
+
+	gotAdded = seq.Added()
+	if gotAdded != 3 {
+		t.Errorf("Sequence(string){}.Added() = %d, want 3", gotAdded)
+	}
+	gotSample = make([]string, 5)
+	gotSample = gotSample[:seq.Sample(gotSample)]
+	wantSample = []string{}
+	if !reflect.DeepEqual(gotSample, wantSample) {
+		t.Errorf("Sequence(string){}.Sample() = %v, want %v", gotSample, wantSample)
+	}
+}

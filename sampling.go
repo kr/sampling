@@ -1,0 +1,101 @@
+// Package sampling samples values uniformly at random,
+// without replacement, from an unbounded sequence of inputs.
+// It provides a representative sample
+// when the sequence has unknown length
+// or is too big to store in its entirety.
+//
+// Functions in this package are safe to call concurrently.
+package sampling
+
+import (
+	"math/rand"
+	"sync"
+)
+
+// A Sequence represents a sequence of values of type T,
+// and of unknown, unbounded size.
+// New values can be added to the sequence at any time.
+// Its Sample method reads a sample of those values,
+// chosen uniformly at random from the inputs so far.
+// It also has a fixed sampling capacity,
+// which limits the number of values that can be sampled.
+//
+// Its methods are safe to call concurrently.
+// The zero value of Sequence is a valid sequence
+// with a sampling capacity of 0
+// (meaning its samples will be empty).
+type Sequence(type T) struct {
+	mu  sync.Mutex
+	n   int
+	buf []T // slice header is constant
+}
+
+// New returns a new Sequence
+// with sampling capacity cap.
+func New(type T)(cap int) *Sequence(T) {
+	return &Sequence(T){buf: make([]T, cap)}
+}
+
+// Reset removes all values from s.
+func (s *Sequence(T)) Reset() {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.n = 0
+}
+
+// Add adds v to s.
+func (s *Sequence(T)) Add(v T) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	if len(s.buf) < 1 {
+	} else if s.n < len(s.buf) {
+		s.buf[s.n] = v
+	} else if i := rand.Intn(s.n+1); i < len(s.buf) {
+		// Sample v with probability len(s.buf)/n
+		// (where n is the number of items so far, including v).
+		// Replace a sampled item with prob. 1/len(s.buf).
+		s.buf[i] = v
+		// See Jeffrey S. Vitter, Random sampling with a reservoir,
+		// ACM Trans. Math. Softw. 11 (1985), no. 1, 37–57.
+	}
+	s.n++
+}
+
+// Sample reads a sample into p.
+// The values in the sample are
+// chosen uniformly at random
+// from the sequence of values added to s
+// since the last call to Reset.
+//
+// It returns the number of values read.
+// It will not read more than the sampling capacity of s.
+//
+// Repeated calls to Sample are not independent
+// or random with respect to each other,
+// only with respect to the input sequence.
+// For instance, two calls to Sample
+// with no intervening Add or Reset
+// will read identical values.
+func (s *Sequence(T)) Sample(p []T) int {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	b := s.buf
+	if s.n < len(b) {
+		b = b[:s.n]
+	}
+	return copy(p, b)
+}
+
+// Cap returns the sampling capacity of s.
+func (s *Sequence(T)) Cap() int {
+	return len(s.buf) // slice header is constant
+}
+
+// Added returns the number of values added to s
+// since the last call to Reset.
+func (s *Sequence(T)) Added() int {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return s.n
+}
