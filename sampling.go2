@@ -4,6 +4,8 @@
 // when the sequence has unknown length
 // or is too big to store in its entirety.
 //
+// The approach used here is commonly known as reservoir sampling.
+//
 // Functions in this package are safe to call concurrently.
 package sampling
 
