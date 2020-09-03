@@ -1,15 +1,14 @@
-package sampling_test
+//package sampling_test
+package sampling
 
 import (
 	"errors"
 	"fmt"
-
-	"kr.dev/sampling"
 )
 
 func Example_errors() {
 	// Make & populate a new sequence of errors with capacity 5.
-	seq := sampling.New(error)(5)
+	seq := New[error](5)
 	seq.Add(errors.New("first"))
 	seq.Add(errors.New("second"))
 	seq.Add(errors.New("third"))
@@ -25,7 +24,7 @@ func Example_errors() {
 
 func Example_many() {
 	// Make & populate a new sequence of ints with capacity 3.
-	seq := sampling.New(int)(3)
+	seq := New[int](3)
 	for i := 0; i < 10_000; i++ {
 		seq.Add(i)
 	}
